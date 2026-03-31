@@ -5,6 +5,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+
 	"github.com/tasqalent/tq-shared-go/errors"
 	sharedhttp "github.com/tasqalent/tq-shared-go/httpclient"
 	"github.com/tasqalent/tq-shared-go/logging"
@@ -16,19 +19,13 @@ import (
 func New(cfg config.Config) http.Handler {
 	logging.Init(cfg.ServiceName, cfg.LogLevel)
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
+	r.Use(chimw.RedirectSlashes)
 
-	if h, err := authProxyHandler(cfg); err == nil {
-		mux.Handle("/auth/", h)
-	} else {
-		panic("AUTH_SERVICE_URL invalid: " + err.Error())
-	}
+	r.Use(middleware.RequestID)
+	r.Use(middleware.AccessLog)
+	r.Use(middleware.SecurityHeaders)
 
 	corsMW := middleware.NewCORS(middleware.CORSOptions{
 		AllowedOrigins: cfg.CORSAllowedOrigins,
@@ -38,14 +35,21 @@ func New(cfg config.Config) http.Handler {
 		AllowCredentials: cfg.CORSAllowCredentials,
 		MaxAgeSeconds: 600,
 	})
+	r.Use(corsMW)
 
-	return middleware.RequestID(
-		middleware.AccessLog(
-			middleware.SecurityHeaders(
-				corsMW(mux),
-			),
-		),
-	)
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	authProxy, err := authProxyHandler(cfg)
+	if err != nil {
+		panic("AUTH_SERVICE_URL invalid: " + err.Error())
+	}
+	r.Mount("/auth", http.StripPrefix("/auth", authProxy))
+
+	return r
 }
 
 func authProxyHandler(cfg config.Config) (http.Handler, error) {
@@ -66,10 +70,9 @@ func authProxyHandler(cfg config.Config) (http.Handler, error) {
 		}
 	}
 
-	client := sharedhttp.New(cfg.ProxyTimeout)
-	proxy.Transport = client.Transport
+	proxy.Transport = sharedhttp.Transport()
 
-	return http.StripPrefix("/auth", proxy), nil
+	return proxy, nil
 }
 
 func NotFoundJSON(w http.ResponseWriter, _ *http.Request) {
