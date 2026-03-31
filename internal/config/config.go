@@ -42,7 +42,3 @@ func splitCSV(s string) []string {
 	}
 	return out
 }
-
-func FromEnv() Config {
-	return Load()
-}
