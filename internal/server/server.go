@@ -21,7 +21,7 @@ func New(cfg config.Config) http.Handler {
 
 	r := chi.NewRouter()
 
-	r.Use(chimw.RedirectSlashes)
+	r.Use(chimw.StripSlashes)
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.AccessLog)
@@ -70,7 +70,7 @@ func authProxyHandler(cfg config.Config) (http.Handler, error) {
 		}
 	}
 
-	proxy.Transport = sharedhttp.Transport()
+	proxy.Transport = sharedhttp.New(cfg.ProxyTimeout).Transport
 
 	return proxy, nil
 }
