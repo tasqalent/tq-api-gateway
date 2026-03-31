@@ -1,4 +1,6 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/tasqalent/tq-shared-go v1.0.0 h1:zsZlJ07oPYe+VSSGLBgOmR1LxhqVrC2Hwyax+UMaCtI=
-github.com/tasqalent/tq-shared-go v1.0.0/go.mod h1:XptcQnyP4ZdMpyjGF4LLjH+oFoB2F5Edqh+bHOqzxnA=
+github.com/rs/cors v1.11.1 h1:eU3gRzXLRK57F5rKMGMZURNdIG4EoAmX8k94r9wXWHA=
+github.com/rs/cors v1.11.1/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU=
+github.com/tasqalent/tq-shared-go v1.1.1 h1:FEmQcx1JF3y3Jlp4GtAGhA4QKyT6+W6QOcQ5hrnTtJc=
+github.com/tasqalent/tq-shared-go v1.1.1/go.mod h1:P3wCzRqsYEhj9IPmcplQWxPP+6njGDnGn6Zo5LqNTqw=

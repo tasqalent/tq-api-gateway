@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/tasqalent/tq-shared-go/errors"
+	sharedhttp "github.com/tasqalent/tq-shared-go/httpclient"
 	"github.com/tasqalent/tq-shared-go/logging"
 	"github.com/tasqalent/tq-shared-go/middleware"
 
@@ -29,7 +30,22 @@ func New(cfg config.Config) http.Handler {
 		panic("AUTH_SERVICE_URL invalid: " + err.Error())
 	}
 
-	return middleware.RequestID(middleware.AccessLog(mux))
+	corsMW := middleware.NewCORS(middleware.CORSOptions{
+		AllowedOrigins: cfg.CORSAllowedOrigins,
+		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Authorization", "Content-Type", middleware.HeaderRequestID},
+		ExposedHeaders: []string{middleware.HeaderRequestID},
+		AllowCredentials: cfg.CORSAllowCredentials,
+		MaxAgeSeconds: 600,
+	})
+
+	return middleware.RequestID(
+		middleware.AccessLog(
+			middleware.SecurityHeaders(
+				corsMW(mux),
+			),
+		),
+	)
 }
 
 func authProxyHandler(cfg config.Config) (http.Handler, error) {
@@ -46,11 +62,12 @@ func authProxyHandler(cfg config.Config) (http.Handler, error) {
 			originalRewrite(pr)
 		}
 		if rid := pr.In.Header.Get(middleware.HeaderRequestID); rid != "" {
-			pr.Out.Header.Set("X-Request-ID", rid)
+			pr.Out.Header.Set(middleware.HeaderRequestID, rid)
 		}
 	}
 
-	proxy.Transport = http.DefaultTransport
+	client := sharedhttp.New(cfg.ProxyTimeout)
+	proxy.Transport = client.Transport
 
 	return http.StripPrefix("/auth", proxy), nil
 }
