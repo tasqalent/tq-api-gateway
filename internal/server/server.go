@@ -2,18 +2,16 @@ package server
 
 import (
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/tasqalent/tq-shared-go/errors"
-	sharedhttp "github.com/tasqalent/tq-shared-go/httpclient"
 	"github.com/tasqalent/tq-shared-go/logging"
 	"github.com/tasqalent/tq-shared-go/middleware"
 
 	"github.com/tasqalent/tq-api-gateway/internal/config"
+	apiproxy "github.com/tasqalent/tq-api-gateway/internal/proxy"
 )
 
 func New(cfg config.Config) http.Handler {
@@ -37,42 +35,33 @@ func New(cfg config.Config) http.Handler {
 	})
 	r.Use(corsMW)
 
+	r.NotFound(NotFoundJSON)
+
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	authProxy, err := authProxyHandler(cfg)
-	if err != nil {
-		panic("AUTH_SERVICE_URL invalid: " + err.Error())
+	mustMount := func(pathPrefix, baseURL string) {
+		if baseURL == "" {
+			return
+		}
+		h, err := apiproxy.NewSingleHost(baseURL, cfg.ProxyTimeout)
+		if err != nil {
+			panic(pathPrefix + " upstream invalid: " + err.Error())
+		}
+		r.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
 	}
-	r.Mount("/auth", http.StripPrefix("/auth", authProxy))
+
+	mustMount("/auth", cfg.AuthBaseURL)
+	mustMount("/users", cfg.UsersBaseURL)
+	mustMount("/gigs", cfg.GigBaseURL)
+	mustMount("/chat", cfg.ChatBaseURL)
+	mustMount("/orders", cfg.OrderBaseURL)
+	mustMount("/reviews", cfg.ReviewBaseURL)
 
 	return r
-}
-
-func authProxyHandler(cfg config.Config) (http.Handler, error) {
-	target, err := url.Parse(cfg.AuthBaseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	proxy := httputil.NewSingleHostReverseProxy(target)
-
-	originalRewrite := proxy.Rewrite
-	proxy.Rewrite = func(pr *httputil.ProxyRequest) {
-		if originalRewrite != nil {
-			originalRewrite(pr)
-		}
-		if rid := pr.In.Header.Get(middleware.HeaderRequestID); rid != "" {
-			pr.Out.Header.Set(middleware.HeaderRequestID, rid)
-		}
-	}
-
-	proxy.Transport = sharedhttp.New(cfg.ProxyTimeout).Transport
-
-	return proxy, nil
 }
 
 func NotFoundJSON(w http.ResponseWriter, _ *http.Request) {
