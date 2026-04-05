@@ -8,9 +8,10 @@ import (
 
 	"github.com/tasqalent/tq-shared-go/errors"
 	"github.com/tasqalent/tq-shared-go/logging"
-	"github.com/tasqalent/tq-shared-go/middleware"
+	sharedmw "github.com/tasqalent/tq-shared-go/middleware"
 
 	"github.com/tasqalent/tq-api-gateway/internal/config"
+	gatewaymw "github.com/tasqalent/tq-api-gateway/internal/middleware"
 	apiproxy "github.com/tasqalent/tq-api-gateway/internal/proxy"
 )
 
@@ -21,15 +22,15 @@ func New(cfg config.Config) http.Handler {
 
 	r.Use(chimw.StripSlashes)
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.AccessLog)
-	r.Use(middleware.SecurityHeaders)
+	r.Use(sharedmw.RequestID)
+	r.Use(sharedmw.AccessLog)
+	r.Use(sharedmw.SecurityHeaders)
 
-	corsMW := middleware.NewCORS(middleware.CORSOptions{
+	corsMW := sharedmw.NewCORS(sharedmw.CORSOptions{
 		AllowedOrigins: cfg.CORSAllowedOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Authorization", "Content-Type", middleware.HeaderRequestID},
-		ExposedHeaders: []string{middleware.HeaderRequestID},
+		AllowedHeaders: []string{"Authorization", "Content-Type", sharedmw.HeaderRequestID},
+		ExposedHeaders: []string{sharedmw.HeaderRequestID},
 		AllowCredentials: cfg.CORSAllowCredentials,
 		MaxAgeSeconds: 600,
 	})
@@ -43,7 +44,7 @@ func New(cfg config.Config) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	mustMount := func(pathPrefix, baseURL string) {
+	mustMount := func(router chi.Router, pathPrefix, baseURL string) {
 		if baseURL == "" {
 			return
 		}
@@ -51,16 +52,20 @@ func New(cfg config.Config) http.Handler {
 		if err != nil {
 			panic(pathPrefix + " upstream invalid: " + err.Error())
 		}
-		r.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
+		router.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
 	}
 
-	mustMount("/auth", cfg.AuthBaseURL)
-	mustMount("/users", cfg.UsersBaseURL)
-	mustMount("/gigs", cfg.GigBaseURL)
-	mustMount("/chat", cfg.ChatBaseURL)
-	mustMount("/orders", cfg.OrderBaseURL)
-	mustMount("/reviews", cfg.ReviewBaseURL)
+	mustMount(r, "/auth", cfg.AuthBaseURL)
 
+	r.Group(func(r chi.Router) {
+		r.Use(gatewaymw.RequireBearerJWT(cfg.JWTSecret))
+		mustMount(r, "/users", cfg.UsersBaseURL)
+		mustMount(r, "/gigs", cfg.GigBaseURL)
+		mustMount(r, "/chat", cfg.ChatBaseURL)
+		mustMount(r, "/orders", cfg.OrderBaseURL)
+		mustMount(r, "/reviews", cfg.ReviewBaseURL)
+	})
+		
 	return r
 }
 

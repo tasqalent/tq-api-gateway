@@ -13,6 +13,8 @@ type Config struct {
 	LogLevel string
 	ProxyTimeout time.Duration
 
+	JWTSecret string
+
 	AuthBaseURL string
 	UsersBaseURL string
 	GigBaseURL string
@@ -30,6 +32,8 @@ func Load() Config {
 		HTTPAddr: sharedcfg.GetString("HTTP_ADDR", ":8080"),
 		LogLevel: sharedcfg.GetString("LOG_LEVEL", "INFO"),
 		ProxyTimeout: sharedcfg.GetDuration("GATEWAY_PROXY_TIMEOUT", 30*time.Second),
+
+		JWTSecret: sharedcfg.GetString("GATEWAY_JWT_SECRET", ""),
 		
 		AuthBaseURL: sharedcfg.GetString("AUTH_SERVICE_URL", "http://127.0.0.1:3001"),
 		UsersBaseURL: sharedcfg.GetString("USERS_SERVICE_URL", ""),
