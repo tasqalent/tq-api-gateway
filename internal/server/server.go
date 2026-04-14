@@ -36,6 +36,15 @@ func New(cfg config.Config) http.Handler {
 	})
 	r.Use(corsMW)
 
+	jwtMW := gatewaymw.RequireBearerJWT(cfg.JWTSecret)
+	rbacMW := gatewaymw.RequireRole(cfg.RequiredRole)
+
+	protectedMW := func(next http.Handler) http.Handler {
+		return jwtMW(rbacMW(next))
+	}
+
+	r.Use(gatewaymw.PublicPathSkipper(cfg.PublicPathPrefixes, protectedMW))
+
 	r.NotFound(NotFoundJSON)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +53,7 @@ func New(cfg config.Config) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	mustMount := func(router chi.Router, pathPrefix, baseURL string) {
+	mustMount := func(pathPrefix, baseURL string) {
 		if baseURL == "" {
 			return
 		}
@@ -52,19 +61,16 @@ func New(cfg config.Config) http.Handler {
 		if err != nil {
 			panic(pathPrefix + " upstream invalid: " + err.Error())
 		}
-		router.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
+		r.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
 	}
 
-	mustMount(r, "/auth", cfg.AuthBaseURL)
+	mustMount("/auth", cfg.AuthBaseURL)
 
-	r.Group(func(r chi.Router) {
-		r.Use(gatewaymw.RequireBearerJWT(cfg.JWTSecret))
-		mustMount(r, "/users", cfg.UsersBaseURL)
-		mustMount(r, "/gigs", cfg.GigBaseURL)
-		mustMount(r, "/chat", cfg.ChatBaseURL)
-		mustMount(r, "/orders", cfg.OrderBaseURL)
-		mustMount(r, "/reviews", cfg.ReviewBaseURL)
-	})
+	mustMount("/users", cfg.UsersBaseURL)
+	mustMount("/gigs", cfg.GigBaseURL)
+	mustMount("/chat", cfg.ChatBaseURL)
+	mustMount("/orders", cfg.OrderBaseURL)
+	mustMount("/reviews", cfg.ReviewBaseURL)
 		
 	return r
 }

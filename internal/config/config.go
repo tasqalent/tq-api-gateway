@@ -14,6 +14,8 @@ type Config struct {
 	ProxyTimeout time.Duration
 
 	JWTSecret string
+	PublicPathPrefixes []string
+	RequiredRole string
 
 	AuthBaseURL string
 	UsersBaseURL string
@@ -34,6 +36,8 @@ func Load() Config {
 		ProxyTimeout: sharedcfg.GetDuration("GATEWAY_PROXY_TIMEOUT", 30*time.Second),
 
 		JWTSecret: sharedcfg.GetString("GATEWAY_JWT_SECRET", ""),
+		PublicPathPrefixes: splitCSV(sharedcfg.GetString("GATEWAY_PUBLIC_PATHS", "/healthz,/auth")),
+		RequiredRole: sharedcfg.GetString("GATEWAY_REQUIRED_ROLE", ""),
 		
 		AuthBaseURL: sharedcfg.GetString("AUTH_SERVICE_URL", "http://127.0.0.1:3001"),
 		UsersBaseURL: sharedcfg.GetString("USERS_SERVICE_URL", ""),
