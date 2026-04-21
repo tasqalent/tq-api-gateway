@@ -71,6 +71,20 @@ func New(cfg config.Config) http.Handler {
 	mustMount("/chat", cfg.ChatBaseURL)
 	mustMount("/orders", cfg.OrderBaseURL)
 	mustMount("/reviews", cfg.ReviewBaseURL)
+
+	mustMountWS := func(pathPrefix, baseURL string) {
+		if baseURL == "" {
+			return
+		}
+		h, err := apiproxy.NewWebSocketProxy(baseURL, cfg.WebSocketIdleTimeout)
+		if err != nil {
+			panic(pathPrefix + " ws upstream invalid: " + err.Error())
+		}
+		r.Mount(pathPrefix, http.StripPrefix(pathPrefix, h))
+	}
+
+	mustMountWS("/ws/chat", cfg.ChatWSBaseURL)
+	mustMountWS("/ws/order", cfg.OrderWSBaseURL)
 		
 	return r
 }
