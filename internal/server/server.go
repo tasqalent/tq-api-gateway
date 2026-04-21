@@ -84,7 +84,7 @@ func New(cfg config.Config) http.Handler {
 	}
 
 	mustMountWS("/ws/chat", cfg.ChatWSBaseURL)
-	mustMountWS("/ws/order", cfg.OrderWSBaseURL)
+	mustMountWS("/ws/orders", cfg.OrderWSBaseURL)
 		
 	return r
 }
