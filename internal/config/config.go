@@ -24,6 +24,10 @@ type Config struct {
 	OrderBaseURL string
 	ReviewBaseURL string
 
+	ChatWSBaseURL string
+	OrderWSBaseURL string
+	WebSocketIdleTimeout time.Duration
+
 	CORSAllowedOrigins []string
 	CORSAllowCredentials bool
 }
@@ -45,6 +49,10 @@ func Load() Config {
 		ChatBaseURL: sharedcfg.GetString("CHAT_SERVICE_URL", ""),
 		OrderBaseURL: sharedcfg.GetString("ORDER_SERVICE_URL", ""),
 		ReviewBaseURL: sharedcfg.GetString("REVIEW_SERVICE_URL", ""),
+
+		ChatWSBaseURL: sharedcfg.GetString("CHAT_WS_URL", ""),
+		OrderWSBaseURL: sharedcfg.GetString("ORDER_WS_URL", ""),
+		WebSocketIdleTimeout: sharedcfg.GetDuration("GATEWAY_WS_IDLE_TIMEOUT", 5*time.Minute),
 
 		CORSAllowedOrigins: splitCSV(sharedcfg.GetString("CORS_ALLOWED_ORIGINS", "http://localhost:5173")),
 		CORSAllowCredentials: sharedcfg.GetString("CORS_ALLOW_CREDENTIALS", "false") == "true",
