@@ -11,7 +11,12 @@ func IsPublicPath(path string, publicPrefixes []string) bool {
 		if p == "" {
 			continue
 		}
-		if strings.HasPrefix(path, p) {
+
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+
+		if path == p || strings.HasPrefix(path, p+"/") {
 			return true
 		}
 	}
