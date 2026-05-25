@@ -16,18 +16,15 @@ func NewSingleHost(baseURL string, timeout time.Duration) (http.Handler, error) 
 		return nil, err
 	}
 
-	p := httputil.NewSingleHostReverseProxy(target)
-
-	orig := p.Rewrite
-	p.Rewrite = func(pr *httputil.ProxyRequest) {
-		if orig != nil {
-			orig(pr)
-		}
-		if rid := pr.In.Header.Get(middleware.HeaderRequestID); rid != "" {
-			pr.Out.Header.Set(middleware.HeaderRequestID, rid)
-		}
+	p := &httputil.ReverseProxy{
+		Rewrite: func (pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.SetXForwarded()
+			if rid := pr.In.Header.Get(middleware.HeaderRequestID); rid != "" {
+				pr.Out.Header.Set(middleware.HeaderRequestID, rid)
+			}
+		},
+		Transport: sharedhttp.New(timeout).Transport,
 	}
-
-	p.Transport = sharedhttp.New(timeout).Transport
 	return p, nil
 }
