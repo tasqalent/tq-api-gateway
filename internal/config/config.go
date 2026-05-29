@@ -44,7 +44,7 @@ func Load() Config {
 		RequiredRole: sharedcfg.GetString("GATEWAY_REQUIRED_ROLE", ""),
 		
 		AuthBaseURL: sharedcfg.GetString("AUTH_SERVICE_URL", "http://127.0.0.1:3001"),
-		UsersBaseURL: sharedcfg.GetString("USERS_SERVICE_URL", ""),
+		UsersBaseURL: sharedcfg.GetString("USERS_SERVICE_URL", "http://127.0.0.1:3002"),
 		GigBaseURL: sharedcfg.GetString("GIG_SERVICE_URL", ""),
 		ChatBaseURL: sharedcfg.GetString("CHAT_SERVICE_URL", ""),
 		OrderBaseURL: sharedcfg.GetString("ORDER_SERVICE_URL", ""),
